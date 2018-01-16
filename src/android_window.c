@@ -26,19 +26,57 @@
 //========================================================================
 
 #include "internal.h"
+#include <android/log.h>
 
 static int32_t handle_input(struct android_app* app, AInputEvent* event)
 {
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
-        for (size_t i = 0; i < AMotionEvent_getPointerCount(event); ++i)
-        {
-            x = AMotionEvent_getX(event, i);
-            y = AMotionEvent_getY(event, i);
+    int32_t ev_type = AInputEvent_getType(event);
+    if (ev_type == AINPUT_EVENT_TYPE_MOTION) {
+        // hardcoded to 0 (no multi touch gestores so far)
+        double x = AMotionEvent_getX(event, 0);
+        double y = AMotionEvent_getY(event, 0);
+
+        _glfwInputCursorPos(_glfw.windowListHead, x, y);
+
+        _glfw.android.last_cursor_x = x;
+        _glfw.android.last_cursor_y = y;
+
+        switch(AInputEvent_getSource(event)){
+            case AINPUT_SOURCE_TOUCHSCREEN: {
+                int action = AKeyEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+                switch(action) {
+                    case AMOTION_EVENT_ACTION_UP:
+                        _glfwInputMouseClick(_glfw.windowListHead, GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS, 0);
+                        break;
+                    case AMOTION_EVENT_ACTION_DOWN:
+                        _glfwInputMouseClick(_glfw.windowListHead, GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE, 0);
+                        break;
+                }
+                break;
+            }
         }
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
-        _glfwInputKey(_glfw.windowListHead, 0 , AKeyEvent_getKeyCode(event), GLFW_PRESS,0);
+    } else if (ev_type == AINPUT_EVENT_TYPE_KEY) {
+        _glfwInputKey(_glfw.windowListHead, 0 , AKeyEvent_getKeyCode(event), GLFW_PRESS, 0); 
+    }
 
     return 0;
+}
+
+static void handle_size_change(ANativeActivity* activity, const ARect* rect) {
+    __android_log_print(ANDROID_LOG_INFO, "wurst", "Config changed: l=%d,t=%d,r=%d,b=%d", rect->left, rect->top, rect->right, rect->bottom);
+    if (!_glfw.android.window_created) {
+        _glfw.android.window_created = 1;
+    } else {
+        _glfwInputWindowSize(_glfw.windowListHead, rect->right - rect->left, rect->bottom - rect->top);
+    }
+}
+
+static void handleEvents(int timeout) {
+    ALooper_pollAll(timeout, NULL, NULL,(void**)&_glfw.android.source);
+
+    if (_glfw.android.source != NULL) {
+        _glfw.android.source->process(_glfw.android.app, _glfw.android.source);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -50,10 +88,16 @@ int _glfwPlatformCreateWindow(_GLFWwindow* window,
                               const _GLFWctxconfig* ctxconfig,
                               const _GLFWfbconfig* fbconfig)
 {
-    window->android = _glfw.app;
+    // wait for window to become ready
+    while (_glfw.android.app->window == NULL) {
+        handleEvents(-1);
+    }
+    // hmmm maybe should be ANative_Window only?
+    window->android = _glfw.android.app;
     window->android->onInputEvent = handle_input;
+    window->android->activity->callbacks->onContentRectChanged = handle_size_change;
 
-    ANativeWindow_setBuffersGeometry(window->android->window, wndconfig->width, wndconfig->height, 0);
+    //ANativeWindow_setBuffersGeometry(window->android->window, wndconfig->width, wndconfig->height, 0);
 
     if (ctxconfig->client != GLFW_NO_API)
     {
@@ -113,10 +157,14 @@ void _glfwPlatformSetWindowPos(_GLFWwindow* window, int xpos, int ypos)
 
 void _glfwPlatformGetWindowSize(_GLFWwindow* window, int* width, int* height)
 {
-    if (height)
-        *height = ANativeWindow_getHeight(window->android->window);
-    if (width)
-        *width = ANativeWindow_getWidth(window->android->window);
+    // XXX probably shutdown is not properly handled
+    if (window->android->window) {
+        if (height)
+            *height = ANativeWindow_getHeight(window->android->window);
+        if (width)
+            *width = ANativeWindow_getWidth(window->android->window);
+    }
+
 }
 
 void _glfwPlatformSetWindowSize(_GLFWwindow* window, int width, int height)
@@ -136,7 +184,10 @@ void _glfwPlatformSetWindowAspectRatio(_GLFWwindow* window, int n, int d)
 
 void _glfwPlatformGetFramebufferSize(_GLFWwindow* window, int* width, int* height)
 {
-
+    // the underlying buffergeometry is currently being initialized from the
+    // window width and height...so high resolution displays are currently
+    // not supported...so it is safe to just call GetWindowSize() for now
+    _glfwPlatformGetWindowSize(window, width, height);
 }
 
 void _glfwPlatformGetWindowFrameSize(_GLFWwindow* window,
@@ -212,16 +263,17 @@ int _glfwPlatformWindowVisible(_GLFWwindow* window)
 
 void _glfwPlatformPollEvents(void)
 {
-    _glfwInputCursorPos(_glfw.windowListHead, x, y);
+    handleEvents(0);
 }
 
 void _glfwPlatformWaitEvents(void)
 {
-    _glfwPlatformPollEvents();
+    handleEvents(-1);
 }
 
 void _glfwPlatformWaitEventsTimeout(double timeout)
 {
+    handleEvents(timeout * 1e3);
 }
 
 void _glfwPlatformPostEmptyEvent(void)
@@ -230,10 +282,8 @@ void _glfwPlatformPostEmptyEvent(void)
 
 void _glfwPlatformGetCursorPos(_GLFWwindow* window, double* xpos, double* ypos)
 {
-    if (xpos)
-        *xpos = x;
-    if (ypos)
-        *ypos = y;
+    *xpos = (double) _glfw.android.last_cursor_x;
+    *ypos = (double) _glfw.android.last_cursor_y;
 }
 
 void _glfwPlatformSetCursorPos(_GLFWwindow* window, double x, double y)

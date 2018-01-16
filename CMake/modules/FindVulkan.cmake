@@ -35,8 +35,10 @@ elseif (APPLE)
     find_path(VULKAN_INCLUDE_DIR NAMES vulkan/vulkan.h HINTS
         "${VULKAN_LIBRARY}/Headers")
 elseif (ANDROID)
-    find_path(VULKAN_INCLUDE_DIR NAMES vulkan/vulkan.h NO_CMAKE_FIND_ROOT_PATH)
-    find_library(VULKAN_LIBRARY NAMES vulkan NO_CMAKE_FIND_ROOT_PATH)
+    find_path(VULKAN_INCLUDE_DIR NAMES vulkan/vulkan.h)
+    find_library(VULKAN_LIBRARY NAMES vulkan)
+
+    message(STATUS "${VULKAN_INCLUDE_DIR} ${CMAKE_LIBRARY_PATH}")
 else()
     find_path(VULKAN_INCLUDE_DIR NAMES vulkan/vulkan.h HINTS
         "$ENV{VULKAN_SDK}/include")
