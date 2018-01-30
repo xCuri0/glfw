@@ -333,6 +333,22 @@ void _glfwInputDrop(_GLFWwindow* window, int count, const char** paths)
         window->callbacks.drop((GLFWwindow*) window, count, paths);
 }
 
+// Notifies shared code of accelerometer events
+//
+void _glfwInputAccelerometer(_GLFWwindow* window, float x, float y, float z)
+{
+    if (window->callbacks.accelerometer)
+        window->callbacks.accelerometer((GLFWwindow*) window, x, y, z);
+}
+
+// Notifies shared code of gyroscope events
+//
+void _glfwInputGyroscope(_GLFWwindow* window, float x, float y, float z)
+{
+    if (window->callbacks.gyroscope)
+        window->callbacks.gyroscope((GLFWwindow*) window, x, y, z);
+}
+
 // Notifies shared code of a joystick connection or disconnection
 //
 void _glfwInputJoystick(_GLFWjoystick* js, int event)
@@ -843,7 +859,26 @@ GLFWAPI GLFWdropfun glfwSetDropCallback(GLFWwindow* handle, GLFWdropfun cbfun)
     _GLFW_SWAP_POINTERS(window->callbacks.drop, cbfun);
     return cbfun;
 }
+GLFWAPI GLFWsensorfun glfwSetAccelerometerCallback(GLFWwindow* handle,
+                                                  GLFWsensorfun cbfun)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
 
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
+    _GLFW_SWAP_POINTERS(window->callbacks.accelerometer, cbfun);
+    return cbfun;
+}
+GLFWAPI GLFWsensorfun glfwSetGyroscopeCallback(GLFWwindow* handle,
+                                                  GLFWsensorfun cbfun)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
+    _GLFW_SWAP_POINTERS(window->callbacks.gyroscope, cbfun);
+    return cbfun;
+}
 GLFWAPI int glfwJoystickPresent(int jid)
 {
     _GLFWjoystick* js;

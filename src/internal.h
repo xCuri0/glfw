@@ -411,6 +411,8 @@ struct _GLFWwindow
         GLFWcharfun             character;
         GLFWcharmodsfun         charmods;
         GLFWdropfun             drop;
+        GLFWsensorfun           accelerometer;
+        GLFWsensorfun           gyroscope;
     } callbacks;
 
     // This is defined in the window API's platform.h
@@ -698,6 +700,8 @@ void _glfwInputMouseClick(_GLFWwindow* window, int button, int action, int mods)
 void _glfwInputCursorPos(_GLFWwindow* window, double xpos, double ypos);
 void _glfwInputCursorEnter(_GLFWwindow* window, GLFWbool entered);
 void _glfwInputDrop(_GLFWwindow* window, int count, const char** names);
+void _glfwInputAccelerometer(_GLFWwindow* window, float x, float y, float z);
+void _glfwInputAccelerometer(_GLFWwindow* window, float x, float y, float z);
 void _glfwInputJoystick(_GLFWjoystick* js, int event);
 void _glfwInputJoystickAxis(_GLFWjoystick* js, int axis, float value);
 void _glfwInputJoystickButton(_GLFWjoystick* js, int button, char value);
