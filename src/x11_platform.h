@@ -116,6 +116,13 @@ typedef int (* PFN_XISelectEvents)(Display*,Window,XIEventMask*,int);
 #define XIQueryVersion _glfw.x11.xi.QueryVersion
 #define XISelectEvents _glfw.x11.xi.SelectEvents
 
+typedef Bool (* PFN_XRenderQueryExtension)(Display*,int*,int*);
+typedef Status (* PFN_XRenderQueryVersion)(Display*dpy,int*,int*);
+typedef XRenderPictFormat* (* PFN_XRenderFindVisualFormat)(Display*,Visual const*);
+#define XRenderQueryExtension _glfw.x11.xrender.QueryExtension
+#define XRenderQueryVersion _glfw.x11.xrender.QueryVersion
+#define XRenderFindVisualFormat _glfw.x11.xrender.FindVisualFormat
+
 typedef VkFlags VkXlibSurfaceCreateFlagsKHR;
 typedef VkFlags VkXcbSurfaceCreateFlagsKHR;
 
@@ -179,6 +186,9 @@ typedef struct _GLFWwindowX11
     GLFWbool        iconified;
     GLFWbool        maximized;
 
+    // Whether the visual supports framebuffer transparency
+    GLFWbool        transparent;
+
     // Cached position and size used to filter out duplicate events
     int             width, height;
     int             xpos, ypos;
@@ -201,6 +211,8 @@ typedef struct _GLFWlibraryX11
     int             screen;
     Window          root;
 
+    // System content scale
+    float           contentScaleX, contentScaleY;
     // Helper window for IPC
     Window          helperWindowHandle;
     // Invisible cursor for hidden cursor mode
@@ -245,6 +257,8 @@ typedef struct _GLFWlibraryX11
     Atom            NET_WM_STATE_DEMANDS_ATTENTION;
     Atom            NET_WM_BYPASS_COMPOSITOR;
     Atom            NET_WM_FULLSCREEN_MONITORS;
+    Atom            NET_WM_WINDOW_OPACITY;
+    Atom            NET_WM_CM_Sx;
     Atom            NET_ACTIVE_WINDOW;
     Atom            NET_FRAME_EXTENTS;
     Atom            NET_REQUEST_FRAME_EXTENTS;
@@ -265,6 +279,7 @@ typedef struct _GLFWlibraryX11
     // Selection (clipboard) atoms
     Atom            TARGETS;
     Atom            MULTIPLE;
+    Atom            INCR;
     Atom            CLIPBOARD;
     Atom            PRIMARY;
     Atom            CLIPBOARD_MANAGER;
@@ -372,6 +387,18 @@ typedef struct _GLFWlibraryX11
         PFN_XISelectEvents SelectEvents;
     } xi;
 
+    struct {
+        GLFWbool    available;
+        void*       handle;
+        int         major;
+        int         minor;
+        int         eventBase;
+        int         errorBase;
+        PFN_XRenderQueryExtension QueryExtension;
+        PFN_XRenderQueryVersion QueryVersion;
+        PFN_XRenderFindVisualFormat FindVisualFormat;
+    } xrender;
+
 } _GLFWlibraryX11;
 
 // X11-specific per-monitor data
@@ -398,7 +425,7 @@ typedef struct _GLFWcursorX11
 
 
 void _glfwPollMonitorsX11(void);
-GLFWbool _glfwSetVideoModeX11(_GLFWmonitor* monitor, const GLFWvidmode* desired);
+void _glfwSetVideoModeX11(_GLFWmonitor* monitor, const GLFWvidmode* desired);
 void _glfwRestoreVideoModeX11(_GLFWmonitor* monitor);
 
 Cursor _glfwCreateCursorX11(const GLFWimage* image, int xhot, int yhot);
@@ -407,6 +434,7 @@ unsigned long _glfwGetWindowPropertyX11(Window window,
                                         Atom property,
                                         Atom type,
                                         unsigned char** value);
+GLFWbool _glfwIsVisualTransparentX11(Visual* visual);
 
 void _glfwGrabErrorHandlerX11(void);
 void _glfwReleaseErrorHandlerX11(void);

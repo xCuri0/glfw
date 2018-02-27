@@ -85,6 +85,32 @@ static void joystick_callback(int jid, int event)
         glfwRequestWindowAttention(window);
 }
 
+static void drop_callback(GLFWwindow* window, int count, const char** paths)
+{
+    int i;
+
+    for (i = 0;  i < count;  i++)
+    {
+        long size;
+        char* text;
+        FILE* stream = fopen(paths[i], "rb");
+        if (!stream)
+            continue;
+
+        fseek(stream, 0, SEEK_END);
+        size = ftell(stream);
+        fseek(stream, 0, SEEK_SET);
+
+        text = malloc(size + 1);
+        text[size] = '\0';
+        if (fread(text, 1, size, stream) == size)
+            glfwUpdateGamepadMappings(text);
+
+        free(text);
+        fclose(stream);
+    }
+}
+
 static const char* joystick_label(int jid)
 {
     static char label[1024];
@@ -98,7 +124,7 @@ static void hat_widget(struct nk_context* nk, unsigned char state)
     struct nk_rect area;
     struct nk_vec2 center;
 
-    if (nk_widget(&area, nk) != NK_WIDGET_VALID)
+    if (nk_widget(&area, nk) == NK_WIDGET_INVALID)
         return;
 
     center = nk_vec2(area.x + area.w / 2.f, area.y + area.h / 2.f);
@@ -176,6 +202,7 @@ int main(void)
     }
 
     glfwSetJoystickCallback(joystick_callback);
+    glfwSetDropCallback(window, drop_callback);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -269,7 +296,9 @@ int main(void)
                         "LT", "RT",
                     };
 
-                    nk_label(nk, "Gamepad state", NK_TEXT_LEFT);
+                    nk_labelf(nk, NK_TEXT_LEFT,
+                              "Gamepad state: %s",
+                              glfwGetGamepadName(joysticks[i]));
 
                     nk_layout_row_dynamic(nk, 30, 2);
 

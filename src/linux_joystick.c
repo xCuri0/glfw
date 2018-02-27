@@ -38,6 +38,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifndef SYN_DROPPED // < v2.6.39 kernel headers
+// Workaround for CentOS-6, which is supported till 2020-11-30, but still on v2.6.32
+#define SYN_DROPPED 3
+#endif
+
 // Apply an EV_KEY event to the specified joystick
 //
 static void handleKeyEvent(_GLFWjoystick* js, int code, int value)
@@ -306,7 +311,6 @@ GLFWbool _glfwInitJoysticksLinux(void)
 
         closedir(dir);
     }
-    else
 
     // Continue with no joysticks if enumeration fails
 

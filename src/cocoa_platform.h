@@ -88,6 +88,11 @@ typedef struct _GLFWwindowNS
 
     GLFWbool        maximized;
 
+    // Cached window properties to filter out duplicate events
+    int             width, height;
+    int             fbWidth, fbHeight;
+    float           xscale, yscale;
+
     // The total sum of the distances the cursor has been warped
     // since the last cursor motion event was processed
     // This is kept to counteract Cocoa doing the same internally
@@ -135,6 +140,7 @@ typedef struct _GLFWmonitorNS
     CGDirectDisplayID   displayID;
     CGDisplayModeRef    previousMode;
     uint32_t            unitNumber;
+    id                  screen;
 
 } _GLFWmonitorNS;
 
@@ -158,6 +164,6 @@ typedef struct _GLFWtimerNS
 void _glfwInitTimerNS(void);
 
 void _glfwPollMonitorsNS(void);
-GLFWbool _glfwSetVideoModeNS(_GLFWmonitor* monitor, const GLFWvidmode* desired);
+void _glfwSetVideoModeNS(_GLFWmonitor* monitor, const GLFWvidmode* desired);
 void _glfwRestoreVideoModeNS(_GLFWmonitor* monitor);
 
